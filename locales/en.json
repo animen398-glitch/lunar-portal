@@ -1,0 +1,37 @@
+{
+  "brand": {
+    "title": "Lunar Day Portal",
+    "subtitle": "Daily lunar insights in a clean dashboard"
+  },
+  "controls": {
+    "dateLabel": "Choose date",
+    "timezone": "All times in your local timezone."
+  },
+  "panels": {
+    "outlook": "Quick Outlook",
+    "glance": "At a Glance"
+  },
+  "notes": {
+    "title": "Lunar Day Guidance",
+    "subtitle": "Automatically adapts to the chosen lunar day."
+  },
+  "footer": {
+    "disclaimer": "Data shown for demo purposes. Connect to your live ephemeris or NASA feeds for production."
+  },
+  "stats": {
+    "moonrise": "Moonrise",
+    "moonset": "Moonset",
+    "newMoon": "New Moon",
+    "fullMoon": "Full Moon",
+    "lunarSign": "Lunar Sign",
+    "nakshatra": "Nakshatra",
+    "sunrise": "Sunrise",
+    "sunset": "Sunset",
+    "weekday": "Day of Week",
+    "rahuKala": "Rahu Kala",
+    "gulikaKala": "Gulika Kala"
+  },
+  "loading": "Loading...",
+  "error": "Error loading data. Please try again."
+}
+

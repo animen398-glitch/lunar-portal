@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lunar Day Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top-bar">
+    <div class="brand">
+      <span class="logo">☾</span>
+      <div>
+        <h1 data-i18n-key="brand.title">Lunar Day Portal</h1>
+        <p class="subtitle" data-i18n-key="brand.subtitle">Daily lunar insights in a clean dashboard</p>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="date-picker">
+        <label for="date-input" data-i18n-key="controls.dateLabel">Choose date</label>
+        <input id="date-input" type="date" lang="en" aria-describedby="timezone-hint">
+        <small id="timezone-hint" data-i18n-key="controls.timezone">All times in your local timezone.</small>
+      </div>
+
+      <div class="language-switch" role="group" aria-label="Language switcher">
+        <button data-lang="en" class="active">EN</button>
+        <button data-lang="ru">RU</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="primary-card glass">
+      <header class="card-header">
+        <h2 id="gregorian-date">Wednesday, October 22, 2025</h2>
+        <p id="lunar-day-label">Lunar Day 2 · Moon in Scorpio</p>
+      </header>
+
+      <div class="stats-grid" id="stats-grid">
+        <!-- stats populated by JS -->
+      </div>
+    </section>
+
+    <aside class="secondary-panel">
+      <section class="card glass">
+        <header class="card-header">
+          <h2 data-i18n-key="panels.outlook">Quick Outlook</h2>
+        </header>
+        <p id="quick-summary">
+          Reflective, research-friendly vibes prevail. Great for quiet planning.
+        </p>
+      </section>
+
+      <section class="card glass">
+        <header class="card-header">
+          <h2 data-i18n-key="panels.glance">At a Glance</h2>
+        </header>
+        <ul class="at-a-glance" id="at-a-glance"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <section class="lunar-notes glass" id="lunar-notes">
+    <header class="card-header">
+      <div>
+        <h2 data-i18n-key="notes.title">Lunar Day Guidance</h2>
+        <p id="notes-subtitle" data-i18n-key="notes.subtitle">Automatically adapts to the chosen lunar day.</p>
+      </div>
+      <nav class="notes-nav" id="notes-nav" aria-label="Lunar day selector"></nav>
+    </header>
+    <article id="notes-content"></article>
+  </section>
+
+  <footer class="footer">
+    <p data-i18n-key="footer.disclaimer">Data shown for demo purposes. Connect to your live ephemeris or NASA feeds for production.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
