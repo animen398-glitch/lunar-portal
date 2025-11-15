@@ -13,7 +13,7 @@ const EPHEMERIS_CONFIG = {
   // Ваш собственный API сервер (если запущен локально или на хостинге)
   // Для локального тестирования: http://localhost:3000/api/ephemeris
   // Для продакшена: замените на URL вашего хостинга
-  customApiUrl: null, // Например: 'https://your-api.com/api/ephemeris'
+  customApiUrl: 'https://lunar-portal-api.onrender.com/api/ephemeris',
   
   // Swiss Ephemeris API endpoint (you'll need to set this up)
   swissEphemerisUrl: 'https://your-swiss-ephemeris-api.com/api/v1/calculate',
