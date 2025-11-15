@@ -94,6 +94,16 @@ app.post('/api/ephemeris', async (req, res) => {
   }
 });
 
+// Простой корневой маршрут (чтобы было видно, что API работает)
+app.get('/', (_req, res) => {
+  res.send('Lunar Portal API is running. Use POST /api/ephemeris for data.');
+});
+
+// Health-check endpoint для Render и мониторинга
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Вспомогательные функции
 function getLunarSign(lunarDay) {
   const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
