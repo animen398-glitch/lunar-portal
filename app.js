@@ -1,500 +1,466 @@
-/**
- * Main Application Entry Point
- * Handles UI updates, language switching, and data fetching
- */
+import { getEphemerisData, getUserLocation, estimateLunarDay } from './services/ephemeris.js';
+import { getLunarDayContent, getAllLunarDays } from './services/lunarDays.js';
 
-// Dynamic imports with error handling
-let getEphemerisData, getUserLocation, getLunarDayContent, getAllLunarDays;
+const dom = {
+  body: document.body,
+  dateInput: document.getElementById('date-input'),
+  languageButtons: Array.from(document.querySelectorAll('.language-switch button')),
+  heroWeekday: document.getElementById('hero-weekday'),
+  heroMonth: document.getElementById('hero-month'),
+  heroDayNumber: document.getElementById('hero-day-number'),
+  heroLunarDay: document.getElementById('hero-lunar-day'),
+  heroMoonSign: document.getElementById('hero-moon-sign'),
+  heroNakshatra: document.getElementById('hero-nakshatra'),
+  heroSunrise: document.getElementById('hero-sunrise'),
+  heroSunset: document.getElementById('hero-sunset'),
+  heroMoonrise: document.getElementById('hero-moonrise'),
+  heroMoonset: document.getElementById('hero-moonset'),
+  quickSummary: document.getElementById('quick-summary'),
+  atAGlance: document.getElementById('at-a-glance'),
+  statsGrid: document.getElementById('stats-grid'),
+  notesNav: document.getElementById('notes-nav'),
+  notesContent: document.getElementById('notes-content'),
+  notesSubtitle: document.getElementById('notes-subtitle'),
+  calendarWeekdays: document.getElementById('calendar-weekdays'),
+  calendarGrid: document.getElementById('calendar-grid'),
+  calendarMonthLabel: document.getElementById('calendar-month-label'),
+  calendarMeta: document.getElementById('calendar-meta'),
+  statusMessage: document.getElementById('status-message'),
+  prevDayBtn: document.getElementById('prev-day'),
+  nextDayBtn: document.getElementById('next-day'),
+  prevMonthBtn: document.getElementById('prev-month'),
+  nextMonthBtn: document.getElementById('next-month'),
+  calendarTodayBtn: document.getElementById('calendar-today')
+};
 
-async function loadServices() {
-  try {
-    const ephemerisModule = await import('./services/ephemeris.js');
-    getEphemerisData = ephemerisModule.getEphemerisData;
-    getUserLocation = ephemerisModule.getUserLocation;
-  } catch (error) {
-    console.error('❌ Не удалось загрузить ephemeris.js:', error);
-    // Fallback functions
-    getEphemerisData = async () => {
-      throw new Error('ephemeris.js не загружен. Загрузите файлы на GitHub.');
-    };
-    getUserLocation = async () => ({ lat: 55.7558, lon: 37.6173 });
-  }
-  
-  try {
-    const lunarDaysModule = await import('./services/lunarDays.js');
-    getLunarDayContent = lunarDaysModule.getLunarDayContent;
-    getAllLunarDays = lunarDaysModule.getAllLunarDays;
-  } catch (error) {
-    console.error('❌ Не удалось загрузить lunarDays.js:', error);
-    // Fallback functions
-    getLunarDayContent = () => ({
-      day: 1,
-      title: 'Day 1',
-      summary: 'Данные не загружены. Загрузите файлы services/lunarDays.js на GitHub.',
-      bulletPoints: ['Файл lunarDays.js не найден'],
-      notes: ['Пожалуйста, загрузите все файлы из папки services на GitHub']
-    });
-    getAllLunarDays = () => [{
-      day: 1,
-      title: 'Day 1',
-      summary: 'Данные не загружены',
-      bulletPoints: [],
-      notes: []
-    }];
-  }
-}
-
-// Application state
 const state = {
-  currentDate: new Date(),
-  currentLang: localStorage.getItem('preferredLang') || 'en',
+  date: new Date(),
+  calendarMonth: null,
+  lang: 'en',
   location: null,
+  ephemeris: null,
+  i18n: {},
   isLoading: false,
-  currentLunarDay: 1
+  activeNotesDay: 1,
+  notesPreview: false
 };
 
-// Translations embedded directly (works without server)
-const translationsData = {
-  en: {
-    brand: {
-      title: "Lunar Day Portal",
-      subtitle: "Daily lunar insights in a clean dashboard"
-    },
-    controls: {
-      dateLabel: "Choose date",
-      timezone: "All times in your local timezone."
-    },
-    panels: {
-      outlook: "Quick Outlook",
-      glance: "At a Glance"
-    },
-    notes: {
-      title: "Lunar Day Guidance",
-      subtitle: "Automatically adapts to the chosen lunar day."
-    },
-    footer: {
-      disclaimer: "Data shown for demo purposes. Connect to your live ephemeris or NASA feeds for production."
-    },
-    stats: {
-      moonrise: "Moonrise",
-      moonset: "Moonset",
-      newMoon: "New Moon",
-      fullMoon: "Full Moon",
-      lunarSign: "Lunar Sign",
-      nakshatra: "Nakshatra",
-      sunrise: "Sunrise",
-      sunset: "Sunset",
-      weekday: "Day of Week",
-      rahuKala: "Rahu Kala",
-      gulikaKala: "Gulika Kala"
-    },
-    loading: "Loading...",
-    error: "Error loading data. Please try again."
-  },
-  ru: {
-    brand: {
-      title: "Портал Лунных Дней",
-      subtitle: "Ежедневные лунные инсайты в удобной панели"
-    },
-    controls: {
-      dateLabel: "Выберите дату",
-      timezone: "Все времена в вашем часовом поясе."
-    },
-    panels: {
-      outlook: "Краткий обзор",
-      glance: "Основное"
-    },
-    notes: {
-      title: "Руководство по Лунным Дням",
-      subtitle: "Автоматически адаптируется к выбранному лунному дню."
-    },
-    footer: {
-      disclaimer: "Данные показаны для демонстрации. Подключите ваши источники эфемерид или NASA для продакшена."
-    },
-    stats: {
-      moonrise: "Восход Луны",
-      moonset: "Заход Луны",
-      newMoon: "Новолуние",
-      fullMoon: "Полнолуние",
-      lunarSign: "Лунный Знак",
-      nakshatra: "Накшатра",
-      sunrise: "Восход Солнца",
-      sunset: "Заход Солнца",
-      weekday: "День Недели",
-      rahuKala: "Раху Кала",
-      gulikaKala: "Гулика Кала"
-    },
-    loading: "Загрузка...",
-    error: "Ошибка загрузки данных. Пожалуйста, попробуйте снова."
+init();
+
+async function init() {
+  state.calendarMonth = startOfMonth(state.date);
+  if (dom.dateInput) {
+    dom.dateInput.value = formatDateInput(state.date);
   }
-};
-
-// Translation cache
-let translations = {};
-
-/**
- * Load translation files (now uses embedded data)
- */
-function loadTranslations(lang) {
-  translations = translationsData[lang] || translationsData.en;
-  setDocumentLang(lang);
-  return translations;
+  attachEventListeners();
+  await changeLanguage(state.lang);
+  try {
+    state.location = await getUserLocation();
+  } catch (error) {
+    console.warn('Geolocation unavailable, using default location.', error);
+  }
+  await refreshData();
+  renderAll();
 }
 
-/**
- * Translate text using i18n keys
- */
-function t(key) {
-  const keys = key.split('.');
-  let value = translations;
-  for (const k of keys) {
-    value = value?.[k];
-    if (!value) return key;
-  }
-  return value;
-}
-
-/**
- * Update all i18n elements on the page
- */
-function updateTranslations() {
-  document.querySelectorAll('[data-i18n-key]').forEach(el => {
-    const key = el.getAttribute('data-i18n-key');
-    const text = t(key);
-    if (text && text !== key) {
-      if (el.tagName === 'INPUT' && el.type === 'date') {
-        // Don't translate input placeholders for date inputs
-        return;
+function attachEventListeners() {
+  dom.languageButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const lang = button.dataset.lang;
+      if (lang && lang !== state.lang) {
+        changeLanguage(lang);
       }
-      el.textContent = text;
+    });
+  });
+
+  if (dom.dateInput) {
+    dom.dateInput.addEventListener('change', (event) => {
+      if (!event.target.value) return;
+      const nextDate = new Date(`${event.target.value}T12:00:00`);
+      setDate(nextDate);
+    });
+  }
+
+  dom.prevDayBtn?.addEventListener('click', () => setDate(addDays(state.date, -1)));
+  dom.nextDayBtn?.addEventListener('click', () => setDate(addDays(state.date, 1)));
+  dom.prevMonthBtn?.addEventListener('click', () => shiftCalendarMonth(-1));
+  dom.nextMonthBtn?.addEventListener('click', () => shiftCalendarMonth(1));
+  dom.calendarTodayBtn?.addEventListener('click', () => setDate(new Date()));
+}
+
+async function changeLanguage(lang) {
+  try {
+    const response = await fetch(`./locales/${lang}.json?v=${Date.now()}`);
+    if (!response.ok) {
+      throw new Error(`Locale load error ${response.status}`);
+    }
+    state.i18n = await response.json();
+    state.lang = lang;
+    document.documentElement.lang = lang;
+    dom.dateInput?.setAttribute('lang', lang);
+    applyStaticTranslations();
+    highlightActiveLanguage();
+    renderAll();
+  } catch (error) {
+    console.error(error);
+    updateStatus(getI18nValue('error') || 'Error loading data.', 'error');
+  }
+}
+
+function highlightActiveLanguage() {
+  dom.languageButtons.forEach(button => {
+    button.classList.toggle('active', button.dataset.lang === state.lang);
+  });
+}
+
+async function refreshData() {
+  setLoading(true);
+  try {
+    const data = await getEphemerisData(state.date, state.location || undefined);
+    state.ephemeris = data;
+    if (data?.lunarDay) {
+      state.activeNotesDay = data.lunarDay;
+      state.notesPreview = false;
+    }
+    updateStatus('');
+  } catch (error) {
+    console.error('Ephemeris error', error);
+    updateStatus(getI18nValue('error') || 'Error loading data.', 'error');
+  } finally {
+    setLoading(false);
+    renderAll();
+  }
+}
+
+function setDate(nextDate) {
+  state.date = new Date(nextDate);
+  state.calendarMonth = startOfMonth(state.date);
+  if (dom.dateInput) {
+    dom.dateInput.value = formatDateInput(state.date);
+  }
+  refreshData();
+}
+
+function shiftCalendarMonth(offset) {
+  state.calendarMonth = startOfMonth(addMonths(state.calendarMonth || state.date, offset));
+  renderCalendar();
+}
+
+function setLoading(isLoading) {
+  state.isLoading = isLoading;
+  dom.body.classList.toggle('loading', isLoading);
+  if (dom.dateInput) {
+    dom.dateInput.disabled = isLoading;
+  }
+}
+
+function renderAll() {
+  if (!Object.keys(state.i18n).length) return;
+  renderHero();
+  renderStats();
+  renderQuickPanels();
+  renderCalendar();
+  renderNotesNav();
+  renderNotesContent();
+}
+
+function renderHero() {
+  const date = state.date;
+  const ephemeris = state.ephemeris;
+  const weekdayFormatter = new Intl.DateTimeFormat(state.lang, { weekday: 'long' });
+  const monthFormatter = new Intl.DateTimeFormat(state.lang, { month: 'long', year: 'numeric' });
+
+  dom.heroWeekday.textContent = capitalize(weekdayFormatter.format(date));
+  dom.heroMonth.textContent = capitalize(monthFormatter.format(date));
+  dom.heroDayNumber.textContent = date.getDate();
+  dom.heroLunarDay.textContent = ephemeris?.lunarDay ?? '—';
+  dom.heroMoonSign.textContent = ephemeris?.lunarSign || '—';
+  dom.heroNakshatra.textContent = ephemeris?.nakshatra || '—';
+  dom.heroSunrise.textContent = ephemeris?.sunrise || '--:--';
+  dom.heroSunset.textContent = ephemeris?.sunset || '--:--';
+  dom.heroMoonrise.textContent = ephemeris?.moonrise || '--:--';
+  dom.heroMoonset.textContent = ephemeris?.moonset || '--:--';
+}
+
+function renderStats() {
+  const labels = state.i18n.stats || {};
+  const ephemeris = state.ephemeris || {};
+  const weekdayFormatter = new Intl.DateTimeFormat(state.lang, { weekday: 'long' });
+  const weekday = capitalize(weekdayFormatter.format(state.date));
+
+  const statsList = [
+    { key: 'moonrise', value: ephemeris.moonrise || '--:--' },
+    { key: 'moonset', value: ephemeris.moonset || '--:--' },
+    { key: 'sunrise', value: ephemeris.sunrise || '--:--' },
+    { key: 'sunset', value: ephemeris.sunset || '--:--' },
+    { key: 'newMoon', value: ephemeris.newMoon || '—' },
+    { key: 'fullMoon', value: ephemeris.fullMoon || '—' },
+    { key: 'lunarSign', value: ephemeris.lunarSign || '—' },
+    { key: 'nakshatra', value: ephemeris.nakshatra || '—' },
+    { key: 'weekday', value: weekday },
+    { key: 'rahuKala', value: ephemeris.rahuKala || '—' },
+    { key: 'gulikaKala', value: ephemeris.gulikaKala || '—' }
+  ];
+
+  dom.statsGrid.innerHTML = statsList.map(item => {
+    const label = labels[item.key] || item.key;
+    return `
+      <div class="stat">
+        <h3>${label}</h3>
+        <p>${item.value}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderQuickPanels() {
+  const content = getLunarDayContent(state.activeNotesDay, state.lang);
+  dom.quickSummary.textContent = content.summary;
+  dom.atAGlance.innerHTML = content.bulletPoints.map(point => `<li>${point}</li>`).join('');
+}
+
+function renderCalendar() {
+  const monthRef = state.calendarMonth || startOfMonth(state.date);
+  renderCalendarWeekdays();
+
+  const monthFormatter = new Intl.DateTimeFormat(state.lang, { month: 'long', year: 'numeric' });
+  dom.calendarMonthLabel.textContent = capitalize(monthFormatter.format(monthRef));
+
+  const weekNumber = getISOWeekNumber(state.date);
+  const dayOfYear = getDayOfYear(state.date);
+  const calendarLabels = state.i18n.calendar || {};
+  dom.calendarMeta.textContent = `${calendarLabels.week || 'Week'} ${weekNumber} · ${calendarLabels.dayOfYear || 'Day'} ${dayOfYear}`;
+
+  const firstDay = new Date(monthRef.getFullYear(), monthRef.getMonth(), 1);
+  const daysInMonth = new Date(monthRef.getFullYear(), monthRef.getMonth() + 1, 0).getDate();
+  const leadingEmpty = (firstDay.getDay() + 6) % 7; // Monday first
+  const totalCells = Math.ceil((leadingEmpty + daysInMonth) / 7) * 7;
+  const today = new Date();
+
+  dom.calendarGrid.innerHTML = '';
+
+  for (let cell = 0; cell < totalCells; cell++) {
+    const dayNumber = cell - leadingEmpty + 1;
+    const cellDate = new Date(monthRef.getFullYear(), monthRef.getMonth(), dayNumber);
+    const button = document.createElement('button');
+    const lunarDay = estimateLunarDay(cellDate, state.location);
+    button.innerHTML = `
+      <span class="date">${cellDate.getDate()}</span>
+      <span class="lunar">${calendarLabels.lunarDay || 'LD'} ${lunarDay}</span>
+    `;
+    button.classList.toggle('muted', cellDate.getMonth() !== monthRef.getMonth());
+    if (cellDate.toDateString() === state.date.toDateString()) {
+      button.classList.add('selected');
+    }
+    if (cellDate.toDateString() === today.toDateString()) {
+      button.classList.add('today');
+    }
+    button.addEventListener('click', () => setDate(cellDate));
+    dom.calendarGrid.appendChild(button);
+  }
+}
+
+function renderCalendarWeekdays() {
+  const weekdays = getWeekdayNames(state.lang);
+  dom.calendarWeekdays.innerHTML = weekdays.map(day => `<span>${day}</span>`).join('');
+}
+
+function renderNotesNav() {
+  const allDays = getAllLunarDays(state.lang);
+  dom.notesNav.innerHTML = '';
+
+  allDays.forEach(day => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = day.day;
+    if (day.day === state.activeNotesDay) {
+      button.classList.add('active');
+    }
+    button.addEventListener('click', () => {
+      state.activeNotesDay = day.day;
+      state.notesPreview = !(state.ephemeris && state.ephemeris.lunarDay === day.day);
+      renderQuickPanels();
+      renderNotesContent();
+      renderNotesNav();
+    });
+    dom.notesNav.appendChild(button);
+  });
+}
+
+function renderNotesContent() {
+  const content = getLunarDayContent(state.activeNotesDay, state.lang);
+  const labels = state.i18n.notesSections || {};
+  const calendarLabels = state.i18n.calendar || {};
+  const baseSubtitle = state.i18n.notes?.subtitle || '';
+  const previewLabel = state.i18n.notes?.preview;
+  const dayLabel = `${calendarLabels.lunarDay || 'Lunar day'} ${state.activeNotesDay}`;
+
+  dom.notesSubtitle.textContent = state.notesPreview && previewLabel
+    ? `${dayLabel} · ${previewLabel}`
+    : `${dayLabel} · ${baseSubtitle}`;
+
+  dom.notesContent.innerHTML = '';
+  const overviewSection = createNoteSection(labels.overview, content.sections?.overview || content.summary, content.notes);
+  if (overviewSection) dom.notesContent.appendChild(overviewSection);
+
+  ['health', 'business', 'relationships', 'sleep', 'practice'].forEach(key => {
+    const section = createNoteSection(labels[key], content.sections?.[key]);
+    if (section) dom.notesContent.appendChild(section);
+  });
+
+  const highlights = [
+    { label: labels.symbol, value: content.sections?.symbol },
+    { label: labels.stone, value: content.sections?.stone },
+    { label: labels.color, value: content.sections?.color },
+    { label: labels.zodiac, value: content.sections?.zodiac }
+  ].filter(item => item.label && item.value);
+
+  if (highlights.length) {
+    const highlightWrap = document.createElement('div');
+    highlightWrap.className = 'note-highlights';
+    highlights.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'highlight-card';
+      const label = document.createElement('span');
+      label.textContent = item.label;
+      const value = document.createElement('strong');
+      value.textContent = item.value;
+      card.append(label, value);
+      highlightWrap.appendChild(card);
+    });
+    dom.notesContent.appendChild(highlightWrap);
+  }
+
+  const astrologers = content.sections?.astrologers || {};
+  const astrologerEntries = Object.entries(astrologers).filter(([, value]) => value);
+  if (astrologerEntries.length) {
+    const heading = document.createElement('h3');
+    heading.textContent = labels.astrologers || 'Astrologers';
+    const grid = document.createElement('div');
+    grid.className = 'astrologer-grid';
+
+    astrologerEntries.forEach(([name, value]) => {
+      const article = document.createElement('article');
+      const title = document.createElement('h4');
+      title.textContent = capitalizeName(name);
+      const text = document.createElement('p');
+      text.textContent = value;
+      article.append(title, text);
+      grid.appendChild(article);
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'note-section';
+    wrapper.append(heading, grid);
+    dom.notesContent.appendChild(wrapper);
+  }
+}
+
+function createNoteSection(label, text, bulletNotes = []) {
+  if (!label || (!text && !bulletNotes?.length)) {
+    return null;
+  }
+  const section = document.createElement('section');
+  section.className = 'note-section';
+  const title = document.createElement('h3');
+  title.textContent = label;
+  section.appendChild(title);
+
+  if (text) {
+    const paragraph = document.createElement('p');
+    paragraph.textContent = text;
+    section.appendChild(paragraph);
+  }
+
+  if (bulletNotes && bulletNotes.length) {
+    const list = document.createElement('ul');
+    bulletNotes.forEach(note => {
+      const li = document.createElement('li');
+      li.textContent = note;
+      list.appendChild(li);
+    });
+    section.appendChild(list);
+  }
+
+  return section;
+}
+
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n-key]').forEach(node => {
+    const key = node.getAttribute('data-i18n-key');
+    const value = getI18nValue(key);
+    if (value) {
+      node.textContent = value;
     }
   });
 }
 
-/**
- * Set document language and direction
- */
-function setDocumentLang(lang) {
-  const html = document.documentElement;
-  html.lang = lang === 'ru' ? 'ru' : 'en';
-  if (lang === 'ar' || lang === 'he') {
-    html.dir = 'rtl';
-  } else {
-    html.dir = 'ltr';
-  }
+function getI18nValue(path) {
+  return path.split('.').reduce((acc, part) => acc?.[part], state.i18n);
 }
 
-/**
- * Initialize language switcher
- */
-function initLanguageSwitcher() {
-  const buttons = document.querySelectorAll('.language-switch button');
-  
-  if (buttons.length === 0) {
-    console.warn('⚠️ Кнопки переключения языка не найдены');
+function updateStatus(message, variant = 'info') {
+  if (!dom.statusMessage) return;
+  if (!message) {
+    dom.statusMessage.hidden = true;
+    dom.statusMessage.textContent = '';
     return;
   }
-  
-  buttons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const lang = btn.getAttribute('data-lang');
-      console.log('🔄 Переключение языка на:', lang);
-      
-      if (state.currentLang === lang) {
-        console.log('Язык уже установлен:', lang);
-        return;
-      }
-      
-      try {
-        state.currentLang = lang;
-        localStorage.setItem('preferredLang', lang);
-        
-        // Update button states
-        buttons.forEach(b => {
-          b.classList.remove('active');
-          if (b === btn) {
-            b.classList.add('active');
-          }
-        });
-        
-        // Update date input language
-        const dateInput = document.getElementById('date-input');
-        if (dateInput) {
-          dateInput.lang = lang === 'ru' ? 'ru' : 'en';
-          // Force date format update
-          const currentValue = dateInput.value;
-          dateInput.value = '';
-          setTimeout(() => {
-            dateInput.value = currentValue;
-          }, 10);
-        }
-        
-        // Update HTML lang attribute
-        document.documentElement.lang = lang;
-        
-        // Reload translations and update UI
-        loadTranslations(lang);
-        updateTranslations();
-        
-        // Refresh data if services are loaded
-        if (getEphemerisData && getLunarDayContent) {
-          refreshData();
-        } else {
-          console.warn('⚠️ Сервисы не загружены, обновление данных пропущено');
-        }
-        
-        console.log('✅ Язык переключен на:', lang);
-      } catch (error) {
-        console.error('❌ Ошибка при переключении языка:', error);
-      }
-    });
-  });
-  
-  // Set initial active button
-  buttons.forEach(btn => {
-    if (btn.getAttribute('data-lang') === state.currentLang) {
-      btn.classList.add('active');
-    }
-  });
-  
-  console.log('✅ Переключатель языка инициализирован');
+  dom.statusMessage.hidden = false;
+  dom.statusMessage.textContent = message;
 }
 
-/**
- * Format date for display
- */
-function formatDate(date, lang) {
-  return date.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+function capitalize(text) {
+  if (!text) return '';
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function capitalizeName(name) {
+  if (!name) return '';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function formatDateInput(date) {
+  return date.toISOString().split('T')[0];
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addDays(date, amount) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function addMonths(date, amount) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + amount);
+  return next;
+}
+
+function getWeekdayNames(lang) {
+  const base = new Date(Date.UTC(2021, 5, 7)); // Monday
+  const formatter = new Intl.DateTimeFormat(lang, { weekday: 'short' });
+  return Array.from({ length: 7 }, (_, idx) => {
+    const date = new Date(base);
+    date.setUTCDate(base.getUTCDate() + idx);
+    return formatter.format(date).toUpperCase();
   });
 }
 
-/**
- * Render statistics grid
- */
-function renderStats(data, lang) {
-  const grid = document.getElementById('stats-grid');
-  grid.innerHTML = '';
-  
-  const statKeys = [
-    { key: 'moonrise', value: data.moonrise },
-    { key: 'moonset', value: data.moonset },
-    { key: 'newMoon', value: data.newMoon },
-    { key: 'fullMoon', value: data.fullMoon },
-    { key: 'lunarSign', value: data.lunarSign },
-    { key: 'nakshatra', value: data.nakshatra },
-    { key: 'sunrise', value: data.sunrise },
-    { key: 'sunset', value: data.sunset },
-    { key: 'weekday', value: formatDate(state.currentDate, lang).split(',')[0] },
-    { key: 'rahuKala', value: data.rahuKala },
-    { key: 'gulikaKala', value: data.gulikaKala }
-  ];
-  
-  statKeys.forEach(({ key, value }) => {
-    const stat = document.createElement('article');
-    stat.className = 'stat';
-    stat.innerHTML = `
-      <h3>${t(`stats.${key}`)}</h3>
-      <p>${value || '--:--'}</p>
-    `;
-    grid.appendChild(stat);
-  });
+function getISOWeekNumber(date) {
+  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  return Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
 }
 
-/**
- * Update overview section
- */
-function updateOverview(data, lang) {
-  document.getElementById('gregorian-date').textContent = formatDate(state.currentDate, lang);
-  document.getElementById('lunar-day-label').textContent = 
-    `${lang === 'ru' ? 'Лунный день' : 'Lunar Day'} ${data.lunarDay} · ${lang === 'ru' ? 'Луна в' : 'Moon in'} ${data.lunarSign}`;
-  
-  const lunarDayContent = getLunarDayContent(data.lunarDay, lang);
-  document.getElementById('quick-summary').textContent = lunarDayContent.summary;
-  
-  // Update "At a Glance" list
-  const glanceList = document.getElementById('at-a-glance');
-  glanceList.innerHTML = '';
-  lunarDayContent.bulletPoints.forEach(point => {
-    const li = document.createElement('li');
-    li.textContent = point;
-    glanceList.appendChild(li);
-  });
+function getDayOfYear(date) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date - start;
+  return Math.floor(diff / 86400000);
 }
-
-/**
- * Build lunar day navigation
- */
-function buildLunarDayNav(lang) {
-  const nav = document.getElementById('notes-nav');
-  nav.innerHTML = '';
-  
-  const days = getAllLunarDays(lang);
-  days.forEach(dayData => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = `${lang === 'ru' ? 'День' : 'Day'} ${dayData.day}`;
-    btn.dataset.day = dayData.day;
-    btn.addEventListener('click', () => {
-      setActiveLunarDay(dayData.day, lang);
-      if (state.currentLunarDay !== dayData.day) {
-        state.currentLunarDay = dayData.day;
-      }
-    });
-    nav.appendChild(btn);
-  });
-}
-
-/**
- * Set active lunar day and display content
- */
-function setActiveLunarDay(dayNumber, lang) {
-  state.currentLunarDay = dayNumber;
-  const content = getLunarDayContent(dayNumber, lang);
-  const container = document.getElementById('notes-content');
-  
-  container.innerHTML = `
-    <h3>${content.title}</h3>
-    <p>${content.summary}</p>
-    ${content.notes.map(paragraph => `<p>${paragraph}</p>`).join('')}
-  `;
-  
-  // Update active button
-  document.querySelectorAll('#notes-nav button').forEach(btn => {
-    btn.classList.toggle('active', Number(btn.dataset.day) === dayNumber);
-  });
-}
-
-/**
- * Refresh all data from APIs
- */
-async function refreshData() {
-  if (state.isLoading) return;
-  
-  state.isLoading = true;
-  document.body.classList.add('loading');
-  
-  try {
-    console.log('🔄 Загрузка данных...');
-    
-    // Get location if not set
-    if (!state.location) {
-      console.log('📍 Получение местоположения...');
-      state.location = await getUserLocation();
-      console.log('📍 Местоположение:', state.location);
-    }
-    
-    // Fetch ephemeris data
-    console.log('🌙 Запрос данных эфемерид...');
-    const ephemerisData = await getEphemerisData(state.currentDate, state.location);
-    console.log('✅ Данные получены:', ephemerisData);
-
-    state.currentLunarDay = ephemerisData.lunarDay;
-    
-    // Update UI
-    renderStats(ephemerisData, state.currentLang);
-    updateOverview(ephemerisData, state.currentLang);
-    buildLunarDayNav(state.currentLang);
-    setActiveLunarDay(ephemerisData.lunarDay, state.currentLang);
-    
-    console.log('✅ Интерфейс обновлен');
-    
-  } catch (error) {
-    console.error('❌ Ошибка загрузки данных:', error);
-    const errorMsg = document.createElement('div');
-    errorMsg.className = 'error-message';
-    errorMsg.textContent = t('error') + ': ' + error.message;
-    const primaryCard = document.querySelector('.primary-card');
-    if (primaryCard) {
-      primaryCard.prepend(errorMsg);
-      setTimeout(() => errorMsg.remove(), 5000);
-    }
-  } finally {
-    state.isLoading = false;
-    document.body.classList.remove('loading');
-  }
-}
-
-/**
- * Initialize date picker
- */
-function initDatePicker() {
-  const dateInput = document.getElementById('date-input');
-  const todayISO = new Date().toISOString().split('T')[0];
-  dateInput.value = todayISO;
-  
-  // Set language for date input to match page language
-  dateInput.lang = state.currentLang === 'ru' ? 'ru' : 'en';
-  
-  dateInput.addEventListener('change', (event) => {
-    const selectedDate = new Date(event.target.value);
-    state.currentDate = selectedDate;
-    refreshData();
-  });
-  
-  // Update date input language when language changes
-  const updateDateInputLang = () => {
-    dateInput.lang = state.currentLang === 'ru' ? 'ru' : 'en';
-  };
-  
-  // Store function to call on language change
-  window.updateDateInputLang = updateDateInputLang;
-}
-
-/**
- * Main initialization
- */
-async function init() {
-  console.log('🚀 Инициализация приложения...');
-  
-  // Load services first
-  await loadServices();
-  
-  // Load translations (synchronous now)
-  loadTranslations(state.currentLang);
-  updateTranslations();
-  
-  // Initialize components
-  initLanguageSwitcher();
-  initDatePicker();
-  
-  // Build navigation if services loaded
-  if (getAllLunarDays) {
-    buildLunarDayNav(state.currentLang);
-  } else {
-    console.warn('⚠️ Не удалось построить навигацию лунных дней');
-  }
-  
-  // Load initial data if services are available
-  if (getEphemerisData && getLunarDayContent) {
-    await refreshData();
-  } else {
-    console.error('❌ Не удалось загрузить данные. Проверьте, что файлы services/ загружены на GitHub.');
-    
-    // Show error message to user
-    const errorMsg = document.createElement('div');
-    errorMsg.className = 'error-message';
-    errorMsg.innerHTML = `
-      <strong>⚠️ Файлы не загружены</strong><br>
-      Загрузите папку <code>services</code> с файлами <code>ephemeris.js</code> и <code>lunarDays.js</code> на GitHub.
-    `;
-    const primaryCard = document.querySelector('.primary-card');
-    if (primaryCard) {
-      primaryCard.prepend(errorMsg);
-    }
-  }
-  
-  console.log('✅ Инициализация завершена');
-}
-
-// Start the application
-init().catch(error => {
-  console.error('❌ Критическая ошибка инициализации:', error);
-});
 

@@ -358,3 +358,7 @@ export async function getUserLocation() {
   });
 }
 
+export function estimateLunarDay(date, location = EPHEMERIS_CONFIG.defaultLocation) {
+  return calculateLunarDay(date, location);
+}
+

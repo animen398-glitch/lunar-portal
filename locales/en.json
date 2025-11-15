@@ -9,11 +9,24 @@
   },
   "panels": {
     "outlook": "Quick Outlook",
-    "glance": "At a Glance"
+    "glance": "At a Glance",
+    "timings": "Core Timings"
   },
   "notes": {
     "title": "Lunar Day Guidance",
-    "subtitle": "Automatically adapts to the chosen lunar day."
+    "subtitle": "Automatically adapts to the chosen lunar day.",
+    "preview": "Previewing a different lunar day"
+  },
+  "hero": {
+    "lunarDay": "Lunar day",
+    "moonIn": "Moon in",
+    "nakshatra": "Nakshatra"
+  },
+  "calendar": {
+    "today": "Today",
+    "lunarDay": "Lunar day",
+    "week": "Week",
+    "dayOfYear": "Day"
   },
   "footer": {
     "disclaimer": "Data shown for demo purposes. Connect to your live ephemeris or NASA feeds for production."
@@ -31,7 +44,29 @@
     "rahuKala": "Rahu Kala",
     "gulikaKala": "Gulika Kala"
   },
+  "notesSections": {
+    "overview": "Description",
+    "health": "Health",
+    "business": "Business & Career",
+    "relationships": "Relationships",
+    "sleep": "Dreams & Rest",
+    "practice": "Practices",
+    "symbol": "Symbol",
+    "stone": "Stone",
+    "color": "Color",
+    "zodiac": "Zodiac Advice",
+    "astrologers": "Astrologers"
+  },
   "loading": "Loading...",
   "error": "Error loading data. Please try again."
 }
+
+
+
+
+
+
+
+
+
 
